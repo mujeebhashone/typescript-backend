@@ -1,10 +1,12 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { UserModel } from "../models/user.model";
 import { verifyPassword } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
 import { RegisterInput, LoginInput } from "../validators/example.validator";
+import logger from "../utils/logger";
+import errorMiddleware from "../middlewares/error.middleware";
 
-export const registerUser = async (req: Request, res: Response) => {
+export const registerUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { username, email, password } = req.body as RegisterInput;
 
@@ -15,12 +17,13 @@ export const registerUser = async (req: Request, res: Response) => {
     }
 
     const newUser = await UserModel.create({ username, email, password });
+    logger.info(`User registered successfully: ${newUser}`);
     res
       .status(201)
       .json({ message: "User registered successfully", user: newUser });
-  } catch (error: unknown) {
+  } catch (error) {
     if (error instanceof Error) {
-      res.status(500).json({ error: error.message });
+      errorMiddleware(error, req, res, next);
     } else {
       res.status(500).json({ error: "An unknown error occurred" });
     }
